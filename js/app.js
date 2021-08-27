@@ -25,19 +25,20 @@ const docFragment = document.createDocumentFragment(); // Create a document frag
 const docHeader= document.getElementsByClassName("page__header");
 const disappearingHeader = docHeader[0]; // This is the header element that will be shown and hidden by the script
 const a = "your-active-class"; // Short name for the active class attribute
-let navBarLinks = ""; // Global variable that will be used later to store NODE list of new navigation links
+let menuLinks = ""; // Global variable that will be used later to store NODE list of new navigation links
 let backToTop = null;
 let targetSection = null;
-
+let idleSeconds = 0; // Global variable to store the time the user did not scroll or move mouse
+let headerOpacity = 1; // The initial opacity for the navBar menu
 /**
  * End Global Variables
  * Start Helper Functions
  *
 */
 function clearActiveClass () { // Iterate through all navigation links and sections to remove 'your-active-class' class
-  let navBarLink = "";
-  for (navBarLink of navBarLinks) {
-      navBarLink.classList.remove(a); // Remove active class attribute from navBar link
+  let menuLink = "";
+  for (menuLink of menuLinks) {
+      menuLink.classList.remove(a); // Remove active class attribute from navBar link
   }
   let activeSection = "";
   for (activeSection of sections) {
@@ -53,14 +54,6 @@ function showHideBackToTopButton () { // Show or hide 'Back to Top' button accor
   }
 }
 
-function showHideNavBar() { // Show navBar briefly then hide it again
-  if (typeof navBarTimeOut !== undefined && typeof opacityInterval !==undefined) { // this check to prevent unidentifed errors of navBarTimeOut and opacityInterval
-    clearTimeout(navBarTimeOut); // Stop the navBar hiding animation on user scroll
-    disappearingHeader.style.opacity= 1; // Show navBar with 100% opacity
-    hideNavBar(); // Then call the hideNavBar function again to start a new timeout
-  }
-}
-
 
 /**
  * End Helper Functions
@@ -70,19 +63,19 @@ function showHideNavBar() { // Show navBar briefly then hide it again
 
 // build the nav
 function buildNav () { // This function runs once and builds the navigation links (navBar Links)
-  let mySection = "";
-  for (mySection of sections) { // Iterate through document sections
-    let sectionDataNav = mySection.getAttribute("data-nav"); // Read 'data-nav' attribute from each section
-    let newLiItem=document.createElement('li'); // Create a new list item that will be used as a navBar Link later
-    newLiItem.innerHTML = sectionDataNav; // Set the innerHTML for the newly created NavBar Link
-    newLiItem.setAttribute("data-nav",sectionDataNav); // Add 'data-nav' attribute to the new navBar link
-    newLiItem.setAttribute("class","navLink");// Add navLink class to the newly created NavBar link
-    newLiItem.style.userSelect = "none"; // Prevent user from accidentally selecting the link text
-    docFragment.appendChild(newLiItem); // Add the new NavBar link to temporary document fragment
+  let section = "";
+  for (section of sections) { // Iterate through document sections
+    let sectionDataNav = section.getAttribute("data-nav"); // Read 'data-nav' attribute from each section
+    let newMenuLink=document.createElement('li'); // Create a new list item that will be used as a navBar Link later
+    newMenuLink.innerHTML = sectionDataNav; // Set the innerHTML for the newly created NavBar Link
+    newMenuLink.setAttribute("data-nav",sectionDataNav); // Add 'data-nav' attribute to the new navBar link
+    newMenuLink.setAttribute("class","menu__link");// Add navLink class to the newly created NavBar link
+    newMenuLink.style.userSelect = "none"; // Prevent user from accidentally selecting the link text
+    docFragment.appendChild(newMenuLink); // Add the new NavBar link to temporary document fragment
   }
   navBarList.append(docFragment); // Append all NavBar links in one step to the document NavBarList <ul> element
-  navBarLinks = document.getElementsByClassName("navLink"); // Create a NODE list containing the newly added navBar links
-  navBarLinks[0].classList.add(a); // Add active class attribute to the first navBar link as default
+  menuLinks = document.getElementsByClassName("menu__link"); // Create a NODE list containing the newly added navBar links
+  menuLinks[0].classList.add(a); // Add active class attribute to the first navBar link as default
 }
 
 function buildBackToTopButton() { // Create a 'Back to Top' button
@@ -102,8 +95,6 @@ function buildBackToTopButton() { // Create a 'Back to Top' button
 }
 
 function setActiveSectionOnClick (clickEvent) {
-  clearActiveClass(); // remove active class attributefrom all navBar links and sections
-  clickEvent.target.classList.add (a); // Add active class attribute to the link clicked by user
   let targetSectionDataNav = clickEvent.target.getAttribute("data-nav"); // Read the 'data-nav' attribute value of the link clicked by user
   let targetSectionId = "";
   let section = "";
@@ -113,8 +104,7 @@ function setActiveSectionOnClick (clickEvent) {
     }
   }
   targetSection = document.getElementById(targetSectionId); // Use the 'data-nav' attribute value to identify the target section
-  targetSection.scrollIntoView({behavior:"smooth"}); // scroll to the target section
-  setActiveSectionOnScroll();
+  targetSection.scrollIntoView({behavior:"smooth"}); // scroll to the target section smoothly
 }
 
 // Add class 'active' to section when near top of viewport
@@ -123,42 +113,57 @@ function setActiveSectionOnScroll () { // Sets the active section & navBar link 
     for (section of sections) {
       let sectionTop = section.getBoundingClientRect().top;
       let sectionDataNav = "";
-      if (sectionTop <= (screen.height/3) && (sectionTop >= -5)) { // section.top is more than 0 and less than third the view port height
-        clearActiveClass(); // clear class attribute from both navBar links and sections
+      if (sectionTop <= (screen.height/3) && section.getBoundingClientRect().bottom > (screen.height/3)) { // section.top is more than 0 and less than third the view port height
+        //clearActiveClass(); // clear class attribute from both navBar links and sections
         section.classList.add(a); // sets the current section as active
         sectionDataNav = section.getAttribute("data-nav"); // read 'data-nav' attribute of the current section in view
-        let navBarLink = "";
-          for (navBarLink of navBarLinks) {
-              let navBarLinkDataNav = navBarLink.getAttribute("data-nav"); // read 'data-nav' attribute of the navBar link
-              if (navBarLinkDataNav === sectionDataNav) { // compare both 'data-nav' attributes
-                navBarLink.classList.add(a); // sets the matching navBar link as active
+        let menuLink = "";
+          for (menuLink of menuLinks) {
+              let menuLinkDataNav = menuLink.getAttribute("data-nav"); // read 'data-nav' attribute of the navBar link
+              if (menuLinkDataNav === sectionDataNav) { // compare both 'data-nav' attributes
+                menuLink.classList.add(a); // sets the matching navBar link as active
+              }
+              else {
+                menuLink.classList.remove(a);
               }
           }
+        } else {
+          section.classList.remove(a);
         }
     }
   showHideBackToTopButton(); // these two functions will run upon event firing
-  showHideNavBar();
+  headerOpacity = 1;
+  disappearingHeader.style.opacity=headerOpacity; // show the navBar menu and reset the uder navBar timer
+  idleSeconds = 0;
 }
 
 function hideNavBar () {
-  let headerOpacity = 1;
-  navBarTimeOut = setTimeout (function(){ // Wait for 1 second then begin to reduce navBar opacity until 100% transparent
-  opacityInterval = setInterval (function() { // concept from w3schools.com
-      if (disappearingHeader.style.opacity <= 0) { // navBar is 100% transparent, clear the interval
-        clearInterval(opacityInterval);
+  navBarTimer = setInterval(function(){ // start the timer to count idle seconds
+    idleSeconds += 1;
+    if (idleSeconds >= 2) { // User idle for 2 seconds
+      if (headerOpacity === 1){ // if the header is visible, start to fade it out
+        opacityInterval = setInterval (function() { // concept from w3schools.com
+          if (disappearingHeader.style.opacity <= 0) { // navBar is 100% transparent, clear the interval / stop
+            clearInterval(opacityInterval);
+          }
+          else { // navBar is not yet 100% transparent, proceed to fade out
+            headerOpacity -= 0.05;
+            disappearingHeader.style.opacity = headerOpacity;
+          }
+        },20);
+      } else { // header is already invisible, do nothing
+
       }
-      else {
-        headerOpacity -= 0.05;
-        disappearingHeader.style.opacity = headerOpacity;
-      }
-    },20);
+      idleSeconds=0; // reset the navBarTimer
+    } else {
+
+    }
   },1000);
 }
 
 function resetView () {
 window.onbeforeunload = function () { // Reset the view to the top when user refreshes the page
-    document.removeEventListener("scroll",setActiveSectionOnScroll,true);
-    window.scrollTo(0,0); // concept from w3schools.com
+  window.scrollTo({top:0,left:0}); // upon window refresh so no smooth scrolling here - concept from w3schools.com -
 }
 };
 
@@ -172,28 +177,33 @@ let htmlElements = document.getElementsByTagName("HTML");
 let htmlElement = htmlElements[0];
 // Build menu
 buildNav();
+// Start the navBarTimer
+hideNavBar();
 // Build 'Back to Top Button'
 buildBackToTopButton();
-// Hide NavBar when user is not scrolling or moving mousemove
-hideNavBar();
-// Start the checkScrolling interval
+//
 resetView();
 
 // Events
 // Scroll to section on link click
 navBarList.addEventListener("click",setActiveSectionOnClick); // Detect when user clicks NavBar Link
 // Style active section on scroll
-document.addEventListener("scroll",setActiveSectionOnScroll); // Detect when user scrolls
+window.addEventListener("scroll",setActiveSectionOnScroll); // Detect when user scrolls
 // Show NavBar when user moves mouse
-document.addEventListener("mousemove",showHideNavBar);
-// Scroll to page top when user clicks 'Back to Page Top' button
-backToTopButton.addEventListener("click",function() {
-  window.scrollTo(0,0);
-  clearActiveClass();
-  navBarLinks[0].classList.add(a); // Set active class attribute to first navBar link
-  sections[0].classList.add(a); // Set active class attribute to first section
-  setActiveSectionOnScroll();
+window.addEventListener("mousemove",function(){ // Show the navBar when user moves mouse
+    headerOpacity = 1;
+    disappearingHeader.style.opacity=headerOpacity;
+    idleSeconds = 0;
+});
 
+window.addEventListener("load",function(){ // Hide navBar after document load
+  let firstRun = setTimeout(function(){
+  disappearingHeader.style.opacity=0;
+  clearTimeout(firstRun);
+},1000);
+})
+backToTopButton.addEventListener("click",function() {
+  window.scrollTo({top:0,left:0,behavior:"smooth"});
 });
 
 });
